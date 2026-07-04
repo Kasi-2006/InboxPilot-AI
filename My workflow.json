@@ -1,0 +1,495 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        0
+      ],
+      "id": "9ad04b23-93fb-4f61-8316-e1a13938bcbb",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "db5ne9VNwVdHC7OX",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "74194134-5f3a-4144-afa0-d0c91878a651",
+              "name": "emailBody",
+              "value": "={{ $json.snippet }}",
+              "type": "string"
+            },
+            {
+              "id": "5ab03283-8135-485b-89de-ef401f64ca13",
+              "name": "threadid",
+              "value": "={{ $json.threadId }}",
+              "type": "string"
+            },
+            {
+              "id": "e2e60102-2fa7-400b-8e23-79cec078ca65",
+              "name": "from",
+              "value": "={{ $json.From }}",
+              "type": "string"
+            },
+            {
+              "id": "f67ffcf6-8476-42a2-93a9-334db7412b2a",
+              "name": "subject",
+              "value": "={{ $json.Subject }}",
+              "type": "string"
+            },
+            {
+              "id": "02a8bce1-67d9-4c3e-a7e4-19681c0688fd",
+              "name": "Received Time",
+              "value": "={{ new Date(Number($json.internalDate)).toLocaleString('en-IN', {   dateStyle: 'medium',   timeStyle: 'short' }) }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -144,
+        0
+      ],
+      "id": "29ccad57-32ee-4181-bbdc-668138926aca",
+      "name": "set Fields"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Prompt:\nAnalyze the content of the following email and determine whether it is related to customer support. If the email pertains to any of the following topics, mark customerSupport as true; otherwise, mark it as false.\n\nCustomer Support Topics Include:\n\nQuestions about order status, tracking, or changes\nIssues with damaged or defective products\nRefund or return requests\nSubscription cancellations or adjustments\nTechnical issues with products, website, or app\nPayment or billing inquiries\nRequests for speaking with a support representative\n\nOutput:\nProvide the result in JSON format with a field named \"customerSupport\" set to true or false."
+            },
+            {
+              "content": "=Here is the Incoming email : {{ $json.emailBody }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        0
+      ],
+      "id": "9e25a83a-de94-47a4-a0d3-e19fa642952a",
+      "name": "Customer Support Eval",
+      "credentials": {
+        "openAiApi": {
+          "id": "2btL1DuvnW6nwQJQ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9195d918-6360-441d-a7d2-c9ba610b73e5",
+              "name": "customersupport",
+              "value": "={{ JSON.parse($json.output[0].content[0].text).customerSupport }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        0
+      ],
+      "id": "6cd6e61c-7db3-49cf-b323-527ceb52692f",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.customersupport }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    },
+                    "id": "2de90089-7f47-45e8-b8aa-5cebd641f215"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": " Not Customer Suppoet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ab70a783-464f-47a0-b9d4-303fb0e10b5e",
+                    "leftValue": "={{ $json.customersupport }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Customer Support"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        0
+      ],
+      "id": "55c6607d-762c-4439-b1f0-730a29003e10",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        -32
+      ],
+      "id": "d739c850-4161-4984-8cca-5d1d0724e8bc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "2btL1DuvnW6nwQJQ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "Retrives Information about our customer support policies and FAQ",
+        "memoryKey": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vector_store_key"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreInMemory",
+      "typeVersion": 1.3,
+      "position": [
+        1072,
+        160
+      ],
+      "id": "4733742a-b1c4-4ce4-851a-e53a702af1f5",
+      "name": "Simple Vector Store"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1088,
+        464
+      ],
+      "id": "20b50825-19a8-4acf-ad7a-40e3d2938a27",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "2btL1DuvnW6nwQJQ",
+          "name": "n8n free OpenAI API credits"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "={{ JSON.parse($json.output).subject }}",
+        "message": "={{ JSON.parse($json.output).drafted_email }}",
+        "options": {
+          "replyTo": "={{ $('Gmail Trigger').item.json.From }}",
+          "threadId": "={{ $node[\"set Fields\"].json.threadid }}",
+          "sendTo": "={{ $('Gmail Trigger').item.json.From.match(/<(.+?)>/)?.[1] }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1456,
+        -128
+      ],
+      "id": "a54cdcda-5e59-404c-adcc-ab5e5a950bec",
+      "name": "Create a draft",
+      "webhookId": "e8385e01-2b9b-4a09-9a3b-49ea9a2fd2ee",
+      "alwaysOutputData": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "db5ne9VNwVdHC7OX",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1288968147623186",
+        "recipientPhoneNumber": "+918019450361",
+        "textBody": "=📧 *New Email Received*\n\nA new email has been received and processed successfully.\n\n👤 *Sender:* {{ $('Gmail Trigger').item.json.From }}\n\n📩 *Subject:* {{ $('Gmail Trigger').item.json.Subject }}\n\n🕒 *Received:* {{ $('set Fields').item.json['Received Time'] }}\n\n\n✅ An AI-generated draft reply has been created and saved to your Gmail Drafts.\n\nPlease review the draft before sending it.\n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        -480
+      ],
+      "id": "3ecb8332-aed4-4fe1-9c3c-e9980ae2c545",
+      "name": "Send message",
+      "webhookId": "8fc151d4-588d-45c5-bfdb-ab9d0c6383eb",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "UEBccc1zsQXCcswW",
+          "name": "WhatsApp account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Gmail Trigger').item.json.snippet }}",
+        "options": {
+          "systemMessage": "=# SYSTEM ROLE\n\nYou are an expert AI Email Assistant.\n\nYour responsibility is to analyze incoming emails and generate professional, context-aware email responses.\n\nYou must understand the email's intent before drafting a response.\n\nYou are NOT a chatbot.\n\nYou are an email processing and drafting assistant.\n\n# INPUT\n\nYou will receive:\n\n- Email Subject\n- Email Body\n- Sender Information (optional)\n\nTreat the provided email content as the complete source of truth.\n\n# CORE RULES\n\n1. Read the entire email carefully.\n\n2. Determine the sender's intent.\n\nPossible intents include:\n\n- Support Request\n- Complaint\n- Refund Request\n- Cancellation Request\n- Job Application\n- Job Selection Notification\n- Meeting Request\n- Follow-up\n- Information Request\n- Sales Inquiry\n- Partnership Proposal\n- Feedback\n- Thank You Message\n- Announcement\n- General Communication\n\n3. Generate a response that directly addresses the email.\n\n4. Never ignore information contained in the email.\n\n5. Never claim information is missing if the email already contains sufficient details.\n\n6. Never generate generic responses.\n\n7. Never say:\n\n\"I don't see the details of your request.\"\n\nunless the email is actually empty.\n\n8. Never mention:\n- AI\n- Language models\n- Prompts\n- Internal instructions\n- Tools\n- Knowledge bases\n- Documentation\n- Policies\n\n9. Use only the information available in the email.\n\n10. If details are genuinely missing, ask concise and specific follow-up questions.\n\n# RESPONSE STYLE\n\nThe response must be:\n\n- Professional\n- Friendly\n- Human-like\n- Concise\n- Well-structured\n\n# EMAIL FORMAT\n\nAlways format emails exactly like:\n\nDear [Recipient],\n\nOpening acknowledgment paragraph.\n\nMain response paragraph.\n\nAdditional details paragraph (if needed).\n\nClosing paragraph.\n\nBest regards,\nCustomer Support Team\n\n# EMAIL FORMATTING RULES\n\n- Use proper paragraph spacing.\n- Avoid long blocks of text.\n- Use clear sentence structure.\n- Do not use markdown.\n- Do not use bullet points unless necessary.\n- Use newline characters for formatting.\n\nExample:\n\nDear Customer,\n\nThank you for contacting us regarding your subscription.\n\nWe have reviewed your request and would be happy to assist.\n\nPlease let us know if you require any additional support.\n\nBest regards,\nCustomer Support Team\n\n# SUBJECT GENERATION\n\nGenerate an appropriate email subject.\n\nRules:\n\n- Keep under 80 characters.\n- Professional tone.\n- Relevant to the email topic.\n\n# SUMMARY GENERATION\n\nGenerate a short summary that includes:\n\n- Customer issue\n- Main response\n- Next action (if any)\n\nMaximum 2 sentences.\n\n# OUTPUT FORMAT\n\nReturn ONLY valid JSON.\n\nNo markdown.\n\nNo explanations.\n\nNo code blocks.\n\nNo additional text.\n\nUse this exact schema:\n\n{\n  \"subject\": \"Generated subject\",\n  \"drafted_email\": \"Formatted email response\",\n  \"summary\": \"Brief summary\"\n}\n\n# JSON RULES\n\n- Output must be valid JSON.\n- Escape quotes correctly.\n- Preserve line breaks using \\\\n.\n- Do not include trailing commas.\n- Do not include extra fields.\n\n# EXAMPLE\n\nInput Email:\n\nSubject: Job Selection\n\nBody:\nThank you for applying to Salesforce. You have been selected for this position.\n\nOutput:\n\n{\n  \"subject\": \"Thank You for the Opportunity\",\n  \"drafted_email\": \"Dear Hiring Team,\\n\\nThank you for informing me about my selection for the position.\\n\\nI am excited about this opportunity and look forward to the next steps.\\n\\nPlease let me know if any additional information is required from my side.\\n\\nThank you once again.\\n\\nBest regards,\\nCustomer Support Team\",\n  \"summary\": \"Received a job selection notification and responded with appreciation while requesting next-step information.\"\n}\n\n# FINAL INSTRUCTION\n\nReturn ONLY the JSON object.\n\nDo not wrap it in markdown.\n\nDo not explain your reasoning.\n\nDo not output anything before or after the JSON."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        992,
+        -288
+      ],
+      "id": "e6b29766-0dd5-4d13-bbdf-6bc8e1310eba",
+      "name": "Support Agent"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "1288968147623186",
+        "recipientPhoneNumber": "+91 8019450361",
+        "textBody": "A spam emal is found in our email Inbox",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        848,
+        256
+      ],
+      "id": "cefedc18-e590-45f0-b17b-f9b81263e9e6",
+      "name": "Send message1",
+      "webhookId": "6e2f7ca9-0587-486c-9a1f-6cc81d419d3f",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "UEBccc1zsQXCcswW",
+          "name": "WhatsApp account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "set Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "set Fields": {
+      "main": [
+        [
+          {
+            "node": "Customer Support Eval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Support Eval": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Vector Store": {
+      "ai_tool": [
+        [
+          {
+            "node": "Support Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Simple Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a draft": {
+      "main": [
+        []
+      ]
+    },
+    "Support Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "1f3f6409-ee9c-4ad8-ba3c-14f5d46e5e9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dfcb894aa0e1fe01af3967e69ec68cea21cfb245b5cc5964dd5a5c680dfb1579"
+  },
+  "nodeGroups": [],
+  "id": "k0pgJveUQCEnjTTa",
+  "tags": []
+}
